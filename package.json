@@ -2,8 +2,8 @@
   "name": "my-healthcare-app",
   "version": "1.0.0",
   "description": "A healthcare portal with login and admin access.",
-  "private": true,  <-- ADD THIS LINE
-  "homepage": ".",   <-- ADD THIS LINE
+  "private": true,
+  "homepage": ".",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",
@@ -33,5 +33,6 @@
     "react-scripts": "^5.0.1"
   }
 }
+
 
 
