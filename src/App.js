@@ -1,11 +1,14 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 // --- Hardcoded User Data ---
+// Updated user data structure to include roles and specific login fields
 const users = [
+  // Full Access Admins (can see Patient, Physician, Sales, Admin)
   {
     username: "SatishD",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: true, // Special flag for specific admin privileges
     entities: {
       "First Bio Lab": "Yes",
       "First Bio Genetics LLC": "Yes",
@@ -19,7 +22,8 @@ const users = [
   {
     username: "AshlieT",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: true,
     entities: {
       "First Bio Lab": "Yes",
       "First Bio Genetics LLC": "Yes",
@@ -33,7 +37,8 @@ const users = [
   {
     username: "Minak",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: true,
     entities: {
       "First Bio Lab": "Yes",
       "First Bio Genetics LLC": "Yes",
@@ -41,79 +46,14 @@ const users = [
       "AIM Laboratories LLC": "Yes",
       "AMICO Dx LLC": "Yes",
       "Enviro Labs LLC": "Yes",
-      "Stat Labs": "Yes",
-    },
-  },
-  {
-    username: "BobS",
-    password: "password123",
-    isAdmin: true,
-    entities: {
-      "First Bio Lab": "Yes",
-      "First Bio Genetics LLC": "Yes",
-      "First Bio Lab of Illinois": "Yes",
-      "AIM Laboratories LLC": "Yes",
-      "AMICO Dx LLC": "Yes",
-      "Enviro Labs LLC": "Yes",
-      "Stat Labs": "Yes",
-    },
-  },
-  {
-    username: "Omar",
-    password: "password123",
-    isAdmin: true,
-    entities: {
-      "First Bio Lab": "Yes",
-      "First Bio Genetics LLC": "Yes",
-      "First Bio Lab of Illinois": "Yes",
-      "AIM Laboratories LLC": "Yes",
-      "AMICO Dx LLC": "Yes",
-      "Enviro Labs LLC": "Yes",
-      "Stat Labs": "Yes",
-    },
-  },
-  {
-    username: "DarangT",
-    password: "password123",
-    isAdmin: true,
-    entities: {
-      "AIM Laboratories LLC": "Yes",
-      "AMICO Dx LLC": "Yes",
       "Stat Labs": "Yes",
     },
   },
   {
     username: "JayM",
     password: "password123",
-    isAdmin: true,
-    entities: {
-      "First Bio Lab": "Yes",
-      "First Bio Genetics LLC": "Yes",
-      "First Bio Lab of Illinois": "Yes",
-      "AIM Laboratories LLC": "Yes",
-      "AMICO Dx LLC": "Yes",
-      "Enviro Labs LLC": "Yes",
-      "Stat Labs": "Yes",
-    },
-  },
-  {
-    username: "ACG",
-    password: "password123",
-    isAdmin: true,
-    entities: {
-      "First Bio Lab": "Yes",
-      "First Bio Genetics LLC": "Yes",
-      "First Bio Lab of Illinois": "Yes",
-      "AIM Laboratories LLC": "Yes",
-      "AMICO Dx LLC": "Yes",
-      "Enviro Labs LLC": "Yes",
-      "Stat Labs": "Yes",
-    },
-  },
-  {
-    username: "MelindaC",
-    password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: true,
     entities: {
       "First Bio Lab": "Yes",
       "First Bio Genetics LLC": "Yes",
@@ -127,15 +67,66 @@ const users = [
   {
     username: "AghaA",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: true,
     entities: {
       "AIM Laboratories LLC": "Yes",
+    },
+  },
+
+  // Regular Admins (Sales & Marketing, Admin portal only)
+  // These users are 'admin' role but NOT 'isFullAccessAdmin'
+  // They have entity access for Admin page reporting
+  {
+    username: "BobS",
+    password: "password123",
+    role: "admin",
+    isFullAccessAdmin: false,
+    entities: {
+      "First Bio Lab": "Yes",
+      "First Bio Genetics LLC": "Yes",
+      "First Bio Lab of Illinois": "Yes",
+      "AIM Laboratories LLC": "Yes",
+      "AMICO Dx LLC": "Yes",
+      "Enviro Labs LLC": "Yes",
+      "Stat Labs": "Yes",
+    },
+  },
+  {
+    username: "Omar",
+    password: "password123",
+    role: "admin",
+    isFullAccessAdmin: false,
+    entities: {
+      "First Bio Lab": "Yes",
+      "First Bio Genetics LLC": "Yes",
+      "First Bio Lab of Illinois": "Yes",
+      "AIM Laboratories LLC": "Yes",
+      "AMICO Dx LLC": "Yes",
+      "Enviro Labs LLC": "Yes",
+      "Stat Labs": "Yes",
+    },
+  },
+  {
+    username: "MelindaC",
+    password: "password123",
+    role: "admin",
+    isFullAccessAdmin: false,
+    entities: {
+      "First Bio Lab": "Yes",
+      "First Bio Genetics LLC": "Yes",
+      "First Bio Lab of Illinois": "Yes",
+      "AIM Laboratories LLC": "Yes",
+      "AMICO Dx LLC": "Yes",
+      "Enviro Labs LLC": "Yes",
+      "Stat Labs": "Yes",
     },
   },
   {
     username: "Wenjun",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: false,
     entities: {
       "AIM Laboratories LLC": "Yes",
     },
@@ -143,33 +134,92 @@ const users = [
   {
     username: "AndreaM",
     password: "password123",
-    isAdmin: true,
+    role: "admin",
+    isFullAccessAdmin: false,
     entities: {
       "AIM Laboratories LLC": "Yes",
+    },
+  },
+  // Corrected roles for these users - they are admins with limited entity access
+  {
+    username: "DarangT",
+    password: "password123",
+    role: "admin", // Corrected: Admin role
+    isFullAccessAdmin: false, // Corrected: Not full access
+    entities: { // Preserving their entity access
+      "AIM Laboratories LLC": "Yes",
+      "AMICO Dx LLC": "Yes",
+      "Stat Labs": "Yes",
+    },
+  },
+  {
+    username: "ACG",
+    password: "password123",
+    role: "admin", // Corrected: Admin role
+    isFullAccessAdmin: false, // Corrected: Not full access
+    entities: { // Preserving their entity access
+      "First Bio Lab": "Yes",
+      "First Bio Genetics LLC": "Yes",
+      "First Bio Lab of Illinois": "Yes",
+      "AIM Laboratories LLC": "Yes",
+      "AMICO Dx LLC": "Yes",
+      "Enviro Labs LLC": "Yes",
+      "Stat Labs": "Yes",
     },
   },
   {
     username: "BenM",
     password: "password123",
-    isAdmin: true,
-    entities: {
+    role: "admin", // Corrected: Admin role
+    isFullAccessAdmin: false, // Corrected: Not full access
+    entities: { // Preserving their entity access
       "Enviro Labs LLC": "Yes",
     },
   },
   {
     username: "SonnyA",
     password: "password123",
-    isAdmin: true,
-    entities: {
+    role: "admin", // Corrected: Admin role
+    isFullAccessAdmin: false, // Corrected: Not full access
+    entities: { // Preserving their entity access
       "AIM Laboratories LLC": "Yes",
     },
   },
+
+  // Dedicated Sales User (only Sales & Marketing portal)
+  // This user will have role: "sales"
   {
-    username: "patient",
+    username: "KeenanW",
     password: "password123",
-    isAdmin: false,
+    role: "sales", // New role for sales-only access
+    isFullAccessAdmin: false, // Sales users are not full access admins
+    entities: {}, // Sales users typically don't have entity access for admin reports
+  },
+
+  // Patient User
+  {
+    lastName: "Doe",
+    ssnLast4: "1234",
+    phoneNumber: "5551234567", // Can be with or without spaces/parentheses in input
+    role: "patient",
+    isFullAccessAdmin: false,
     entities: {},
-  }
+  },
+  // Physician/Provider User
+  {
+    email: "dr.smith@example.com",
+    password: "securepassword",
+    role: "physician",
+    isFullAccessAdmin: false,
+    entities: {},
+  },
+  {
+    email: "dr.jones@example.com",
+    password: "anotherpassword",
+    role: "physician",
+    isFullAccessAdmin: false,
+    entities: {},
+  },
 ];
 
 // --- AuthContext ---
@@ -180,14 +230,36 @@ const AuthProvider = ({ children }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  const login = (username, password) => {
-    const user = users.find(u => u.username === username && u.password === password);
+  const login = (credentials, loginType) => {
+    let userFound = null;
 
-    if (user) {
-      setCurrentUser(user);
+    if (loginType === 'admin') {
+      const { username, password } = credentials;
+      userFound = users.find(u => u.role === 'admin' && u.username === username && u.password === password);
+    } else if (loginType === 'sales') {
+        const { username, password } = credentials;
+        userFound = users.find(u => u.role === 'sales' && u.username === username && u.password === password);
+    }
+    else if (loginType === 'patient') {
+      const { lastName, ssnLast4, phoneNumber } = credentials;
+      // Normalize phone number for comparison (remove non-digits)
+      const normalizedPhoneNumber = phoneNumber.replace(/\D/g, '');
+      userFound = users.find(u =>
+        u.role === 'patient' &&
+        u.lastName.toLowerCase() === lastName.toLowerCase() &&
+        u.ssnLast4 === ssnLast4 &&
+        u.phoneNumber === normalizedPhoneNumber
+      );
+    } else if (loginType === 'physician') {
+      const { email, password } = credentials;
+      userFound = users.find(u => u.role === 'physician' && u.email === email && u.password === password);
+    }
+
+    if (userFound) {
+      setCurrentUser(userFound);
       setErrorMessage("");
     } else {
-      setErrorMessage("Invalid username or password.");
+      setErrorMessage("Invalid credentials. Please try again.");
       setShowModal(true);
     }
   };
@@ -215,46 +287,189 @@ const useAuth = () => {
 
 // --- LoginPage ---
 const LoginPage = () => {
+  const [loginType, setLoginType] = useState('admin'); // Default login type to 'admin'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [ssnLast4, setSsnLast4] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+
   const { login, errorMessage, showModal, closeModal } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    login(username, password);
+    if (loginType === 'admin') {
+      login({ username, password }, loginType);
+    } else if (loginType === 'sales') {
+      login({ username, password }, loginType);
+    } else if (loginType === 'patient') {
+      login({ lastName, ssnLast4, phoneNumber }, loginType);
+    } else if (loginType === 'physician') {
+      login({ email, password }, loginType);
+    }
+  };
+
+  // Function to clear input fields when login type changes
+  const handleLoginTypeChange = (type) => {
+    setLoginType(type);
+    setUsername('');
+    setPassword('');
+    setLastName('');
+    setSsnLast4('');
+    setPhoneNumber('');
+    setEmail('');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Login to Healthcare Portal</h2>
+
+        {/* Login Type Selection */}
+        <div className="mb-6 flex justify-center space-x-4 flex-wrap gap-2">
+          <button
+            onClick={() => handleLoginTypeChange('admin')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              loginType === 'admin' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Admin Login
+          </button>
+          <button
+            onClick={() => handleLoginTypeChange('sales')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              loginType === 'sales' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Sales Login
+          </button>
+          <button
+            onClick={() => handleLoginTypeChange('patient')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              loginType === 'patient' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Patient Login
+          </button>
+          <button
+            onClick={() => handleLoginTypeChange('physician')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              loginType === 'physician' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Physician Login
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          {(loginType === 'admin' || loginType === 'sales') && (
+            <>
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          {loginType === 'patient' && (
+            <>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="ssnLast4" className="block text-sm font-medium text-gray-700">
+                  Last 4 of SSN
+                </label>
+                <input
+                  type="text"
+                  id="ssnLast4"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={ssnLast4}
+                  onChange={(e) => setSsnLast4(e.target.value)}
+                  maxLength="4"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phoneNumber"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          {loginType === 'physician' && (
+            <>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
           <button
             type="submit"
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform transition-transform hover:scale-105"
@@ -410,11 +625,9 @@ const FinancialsReport = ({ entity }) => {
           <ul className="list-disc list-inside text-gray-600 ml-4">
             <li className="mt-2">
               <span className="font-medium">YTD Financials:</span> Placeholder for Year-to-Date data.
-              <p className="ml-4 text-gray-500 text-sm">Summary of financials from January 1, 2025 to current date.</p>
             </li>
             <li className="mt-2">
               <span className="font-medium">Last Month Financials:</span> Placeholder for Last Month's data.
-              <p className="ml-4 text-gray-500 text-sm">Detailed report for the previous full month (e.g., May 2025).</p>
             </li>
           </ul>
           <button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
@@ -476,7 +689,8 @@ const AdminPage = () => {
   const [selectedEntity, setSelectedEntity] = useState('');
   const [adminSubPage, setAdminSubPage] = useState('');
 
-  if (!currentUser || !currentUser.isAdmin) {
+  // Access check: Only users with role 'admin' can view this page
+  if (!currentUser || currentUser.role !== 'admin') {
     return (
       <div className="p-8 bg-white rounded-lg shadow-md text-center text-red-600 text-xl font-semibold">
         Access Denied: You must be an administrator to view this page.
@@ -484,6 +698,7 @@ const AdminPage = () => {
     );
   }
 
+  // Filter accessible entities based on the current admin user's entities
   const accessibleEntities = Object.entries(currentUser.entities || {})
     .filter(([, value]) => value === "Yes")
     .map(([key]) => key);
@@ -503,7 +718,7 @@ const AdminPage = () => {
             value={selectedEntity}
             onChange={(e) => {
               setSelectedEntity(e.target.value);
-              setAdminSubPage('');
+              setAdminSubPage(''); // Reset sub-page when entity changes
             }}
           >
             <option value="">-- Please select an entity --</option>
@@ -553,7 +768,36 @@ const AdminPage = () => {
 // --- Dashboard ---
 const Dashboard = () => {
   const { currentUser, logout } = useAuth();
-  const [currentPage, setCurrentPage] = useState('patient-portal');
+  // Initialize currentPage based on currentUser role for correct default navigation
+  const [currentPage, setCurrentPage] = useState('patient-portal'); // Initial placeholder, will be set by useEffect
+
+  // Define admin users with full access to patient and physician portals
+  const fullAccessAdminsUsernames = ["SatishD", "AshlieT", "Minak", "JayM", "AghaA"];
+
+  // Determine if the current user is a full access admin
+  const isFullAccessAdmin = currentUser?.role === 'admin' && fullAccessAdminsUsernames.includes(currentUser.username);
+
+  // Set default page on initial load or user change
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'patient') {
+        setCurrentPage('patient-portal');
+      } else if (currentUser.role === 'physician') {
+        setCurrentPage('physician-provider');
+      } else if (currentUser.role === 'admin') {
+        if (isFullAccessAdmin) {
+          setCurrentPage('patient-portal'); // Full access admins can view patient/physician
+        } else {
+          setCurrentPage('sales-marketing'); // Other admins (incl. DarangT, ACG, BenM, SonnyA)
+        }
+      } else if (currentUser.role === 'sales') {
+        setCurrentPage('sales-marketing'); // Dedicated sales user like KeenanW
+      } else {
+        setCurrentPage('patient-portal'); // Fallback for any unexpected role
+      }
+    }
+  }, [currentUser, isFullAccessAdmin]); // Depend on currentUser and its full access status
+
 
   const renderContent = () => {
     switch (currentPage) {
@@ -566,6 +810,7 @@ const Dashboard = () => {
       case 'admin':
         return <AdminPage />;
       default:
+        // This default should ideally be caught by useEffect, but as a safeguard
         return (
           <div className="p-8 bg-white rounded-lg shadow-md text-center">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome!</h2>
@@ -583,7 +828,7 @@ const Dashboard = () => {
         </h1>
         <div className="flex items-center space-x-4">
           <span className="text-white text-lg font-medium">
-            Welcome, {currentUser?.username}!
+            Welcome, {currentUser?.username || currentUser?.lastName || currentUser?.email || 'Guest'}!
           </span>
           <button
             onClick={logout}
@@ -596,31 +841,44 @@ const Dashboard = () => {
 
       <div className="flex flex-1 flex-col lg:flex-row p-6 space-y-6 lg:space-y-0 lg:space-x-6">
         <nav className="bg-white p-6 rounded-lg shadow-xl w-full lg:w-64 flex flex-col space-y-4">
-          <button
-            onClick={() => setCurrentPage('patient-portal')}
-            className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
-              currentPage === 'patient-portal' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Patient Portal
-          </button>
-          <button
-            onClick={() => setCurrentPage('physician-provider')}
-            className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
-              currentPage === 'physician-provider' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Physician/Provider
-          </button>
-          <button
-            onClick={() => setCurrentPage('sales-marketing')}
-            className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
-              currentPage === 'sales-marketing' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Sales & Marketing
-          </button>
-          {currentUser?.isAdmin && (
+          {/* Patient Portal button: Visible to actual patients and full access admins */}
+          {(currentUser?.role === 'patient' || isFullAccessAdmin) && (
+            <button
+              onClick={() => setCurrentPage('patient-portal')}
+              className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
+                currentPage === 'patient-portal' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Patient Portal
+            </button>
+          )}
+
+          {/* Physician/Provider button: Visible to actual physicians and full access admins */}
+          {(currentUser?.role === 'physician' || isFullAccessAdmin) && (
+            <button
+              onClick={() => setCurrentPage('physician-provider')}
+              className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
+                currentPage === 'physician-provider' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Physician/Provider
+            </button>
+          )}
+
+          {/* Sales & Marketing button: Visible to all admins and sales users */}
+          {(currentUser?.role === 'admin' || currentUser?.role === 'sales') && (
+            <button
+              onClick={() => setCurrentPage('sales-marketing')}
+              className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
+                currentPage === 'sales-marketing' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Sales & Marketing
+            </button>
+          )}
+
+          {/* Admin button: Visible only to admin users */}
+          {currentUser?.role === 'admin' && (
             <button
               onClick={() => setCurrentPage('admin')}
               className={`px-4 py-3 text-left text-lg font-medium rounded-md transition-colors duration-200 ${
@@ -649,7 +907,6 @@ export default function App() {
   );
 }
 
-// AuthContent component will consume the context and conditionally render LoginPage or Dashboard
 function AuthContent() {
   const { currentUser } = useAuth();
 
@@ -659,4 +916,3 @@ function AuthContent() {
     </div>
   );
 }
-
