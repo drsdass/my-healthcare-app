@@ -322,8 +322,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+    // Removed `justify-start pt-20` to allow for vertical centering with the new background
+    <div className="flex flex-col items-center justify-center w-full min-h-screen z-10 p-4"> {/* Added p-4 for some padding on small screens */}
+      {/* Increased max-width significantly and added responsive width classes */}
+      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Login to One Health Holdings Portal</h2> {/* Updated title */}
 
         {/* Login Type Selection */}
@@ -916,19 +918,21 @@ function AuthContent() {
   const { currentUser } = useAuth();
 
   return (
-    <div className="App">
-      {/* Added an introductory image to the login page for visual appeal */}
+    // Outer container now handles full screen background and centers content
+    <div className="min-h-screen flex items-center justify-center relative">
+      {/* Full screen background image */}
       {!currentUser && (
-        <div className="relative overflow-hidden w-full h-48 md:h-64 lg:h-80 rounded-t-lg mb-6">
-          {/* Replaced placeholder background image with your uploaded DNA helix image */}
+        <>
           <img
             src="/DNA-helix-concept.jpg"
             alt="DNA helix background for One Health Holdings"
-            className="absolute inset-0 w-full h-full object-cover rounded-t-lg"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-100 via-gray-100/50 to-transparent"></div>
-        </div>
+          {/* Overlay for better contrast on the login form */}
+          <div className="absolute inset-0 bg-gray-900 opacity-60"></div>
+        </>
       )}
+      {/* Login or Dashboard content is now correctly layered above the background */}
       {currentUser ? <Dashboard /> : <LoginPage />}
     </div>
   );
