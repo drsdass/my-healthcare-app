@@ -827,10 +827,8 @@ const Dashboard = () => {
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg p-6 flex flex-col md:flex-row justify-between items-center rounded-b-xl">
         {/* Logo and Title */}
         <div className="flex items-center mb-4 md:mb-0">
-          <img src="https://placehold.co/60x60/2563EB/FFFFFF?text=OHH" alt="One Health Holdings Logo" className="mr-4 rounded-full shadow-md" />
-          <h1 className="text-4xl font-extrabold text-white">
-            One Health Holdings Portal {/* Changed from Healthcare Portal */}
-          </h1>
+          {/* Updated logo src to new file name */}
+          <img src="/Logo.png" alt="One Health Holdings Logo" className="h-16 md:h-20 w-auto object-contain mr-4" />
         </div>
         
         <div className="flex items-center space-x-4">
@@ -922,9 +920,10 @@ function AuthContent() {
       {/* Added an introductory image to the login page for visual appeal */}
       {!currentUser && (
         <div className="relative overflow-hidden w-full h-48 md:h-64 lg:h-80 rounded-t-lg mb-6">
+          {/* Replaced placeholder background image with your uploaded DNA helix image */}
           <img
-            src="https://placehold.co/1200x400/0A2351/FFFFFF?text=One+Health+Holdings+Innovations" // Changed image text and background
-            alt="One Health Holdings background"
+            src="/DNA-helix-concept.jpg"
+            alt="DNA helix background for One Health Holdings"
             className="absolute inset-0 w-full h-full object-cover rounded-t-lg"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-100 via-gray-100/50 to-transparent"></div>
