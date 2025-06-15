@@ -1,4 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, query, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
+
 
 // --- Hardcoded User Data ---
 // Updated user data structure to include roles and specific login fields
@@ -222,6 +226,13 @@ const users = [
   },
 ];
 
+// --- Firebase Initialization (Global Access for AuthProvider) ---
+let app;
+let db;
+let auth;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
 // --- AuthContext ---
 const AuthContext = createContext(null);
 
@@ -229,6 +240,43 @@ const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false); // New state for auth readiness
+
+  useEffect(() => {
+    // Initialize Firebase only once
+    if (!app) {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+    }
+
+    // Set up auth state listener
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, if it's an anonymous sign-in, just set it
+        // Otherwise, if custom token was used, the user object will be full
+        console.log("Firebase user signed in:", user.uid);
+      } else {
+        // User is signed out, or not yet signed in.
+        // For Canvas environment, try to sign in with custom token or anonymously.
+        try {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+            console.log("Signed in with custom token.");
+          } else {
+            await signInAnonymously(auth);
+            console.log("Signed in anonymously.");
+          }
+        } catch (error) {
+          console.error("Firebase authentication error:", error);
+        }
+      }
+      setIsAuthReady(true); // Firebase auth state is ready
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []); // Run only once on component mount
 
   const login = (credentials, loginType) => {
     let userFound = null;
@@ -267,6 +315,10 @@ const AuthProvider = ({ children }) => {
   const logout = () => {
     setCurrentUser(null);
     setErrorMessage("");
+    if (auth) {
+      // Re-authenticate anonymously after logout to maintain Firestore access
+      signInAnonymously(auth).catch(error => console.error("Error signing in anonymously after logout:", error));
+    }
   };
 
   const closeModal = () => {
@@ -275,7 +327,7 @@ const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, errorMessage, showModal, closeModal }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, errorMessage, showModal, closeModal, db, auth, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   );
@@ -505,7 +557,7 @@ const LoginPage = () => {
 // --- PatientPortal ---
 const PatientPortal = () => {
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Standardized height/width */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Patient Portal</h2>
       <p className="text-gray-700 text-lg">
         Welcome to the Patient Portal. Here you can view your appointments, test results, and communicate with your healthcare providers.
@@ -531,7 +583,7 @@ const PatientPortal = () => {
 // --- PhysicianProvider ---
 const PhysicianProvider = () => {
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Standardized height/width */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Physician/Provider Dashboard</h2>
       <p className="text-gray-700 text-lg">
         This portal provides tools and resources for physicians and healthcare providers.
@@ -563,19 +615,106 @@ const PhysicianProvider = () => {
 
 // --- SalesMarketing ---
 const SalesMarketing = () => {
+  const { currentUser, db, isAuthReady } = useAuth();
+  const [salesData, setSalesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Full access admins who can see all reports (SatishD, AshlieT, Minak)
+  const fullAccessSalesAdmins = ["SatishD", "AshlieT", "Minak"];
+
+  useEffect(() => {
+    if (!db || !isAuthReady) return; // Ensure Firestore and auth are ready
+
+    const fetchSalesData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const salesColRef = collection(db, `artifacts/${appId}/public/data/salesReports`);
+        const q = query(salesColRef);
+        const querySnapshot = await getDocs(q);
+        const fetchedData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Sorting the data to ensure consistent display
+        fetchedData.sort((a, b) => {
+            // Assuming 'date' is a string like "April 2025" or can be converted to a comparable format
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+            if (a.location < b.location) return -1; // Secondary sort by location
+            if (a.location > b.location) return 1;
+            return 0;
+        });
+
+        setSalesData(fetchedData);
+      } catch (err) {
+        console.error("Error fetching sales data:", err);
+        setError("Failed to load sales data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesData();
+  }, [db, isAuthReady]); // Re-fetch when db or auth status changes
+
+  // Filter sales data based on user role and permissions
+  const filteredSalesData = currentUser && fullAccessSalesAdmins.includes(currentUser.username)
+    ? salesData // Full access admins see all data
+    : salesData.filter(item =>
+        item.username && item.username.split(',,').includes(currentUser?.username)
+      );
+
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Standardized height/width */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Sales & Marketing Dashboard</h2>
       <p className="text-gray-700 text-lg">
         Access tools and insights for sales and marketing initiatives.
       </p>
+
+      {/* Sales Performance Section */}
       <div className="mt-6 p-4 border border-gray-200 rounded-md bg-gray-50">
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">Sales Performance:</h3>
-        <p className="text-gray-600">View sales metrics, lead conversions, and revenue reports.</p>
-        <button className="mt-4 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md">
-          View Sales Reports
-        </button>
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">Sales Performance:</h3>
+        {loading && <p className="text-blue-600">Loading sales data...</p>}
+        {error && <p className="text-red-600">{error}</p>}
+        {!loading && !error && filteredSalesData.length > 0 ? (
+          <div className="overflow-x-auto"> {/* Added for horizontal scrolling on small screens */}
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reimbursement</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COGS</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Associated Rep Name</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username(s)</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSalesData.map((item, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.location}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.reimbursement.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cogs.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.net.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.commission.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.entity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.associatedrepname}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.username}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (!loading && !error && <p className="text-gray-600">No sales data available for your account.</p>)}
       </div>
+
+      {/* Marketing Campaigns Section */}
       <div className="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-xl font-semibold text-gray-700 mb-2">Marketing Campaigns:</h3>
         <p className="text-gray-600">Manage and analyze your ongoing marketing campaigns.</p>
@@ -691,9 +830,16 @@ const MonthlyBonusReport = ({ entity }) => {
 
 // --- AdminPage ---
 const AdminPage = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, db, auth, isAuthReady } = useAuth();
   const [selectedEntity, setSelectedEntity] = useState('');
   const [adminSubPage, setAdminSubPage] = useState('');
+  const [csvInput, setCsvInput] = useState('');
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  // Define users who are allowed to perform the data dump
+  const allowedDataDumpUsers = ["SatishD", "AshlieT"];
+  const canPerformDataDump = currentUser?.role === 'admin' && allowedDataDumpUsers.includes(currentUser.username);
 
   // Access check: Only users with role 'admin' can view this page
   if (!currentUser || currentUser.role !== 'admin') {
@@ -704,13 +850,92 @@ const AdminPage = () => {
     );
   }
 
+  const parseCsv = (csvString) => {
+    const lines = csvString.trim().split('\n');
+    if (lines.length < 2) throw new Error("CSV must contain headers and at least one row of data.");
+
+    const headers = lines[0].split(',').map(header => header.trim());
+    const data = lines.slice(1).map(line => {
+      const values = line.split(',');
+      if (values.length !== headers.length) {
+        console.warn(`Skipping malformed row: ${line}`);
+        return null; // Skip malformed rows
+      }
+      const row = {};
+      headers.forEach((header, index) => {
+        if (['Reimbursement', 'COGS', 'Net', 'Commission'].includes(header)) {
+          row[header.toLowerCase()] = parseFloat(values[index]) || 0; // Default to 0 if parsing fails
+        } else {
+          row[header.toLowerCase()] = values[index].trim();
+        }
+      });
+      return row;
+    }).filter(row => row !== null); // Filter out nulls from malformed rows
+    return data;
+  };
+
+  const handleUploadSalesData = async () => {
+    if (!db || !auth || !auth.currentUser || !isAuthReady) {
+      setUploadMessage("Error: Database or authentication not ready.");
+      return;
+    }
+
+    if (!canPerformDataDump) { // Additional check for data dump privilege
+      setUploadMessage("Access Denied: You do not have permission to upload sales data.");
+      return;
+    }
+
+    if (!csvInput.trim()) {
+      setUploadMessage("Please paste CSV data into the text area.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadMessage("Uploading data...");
+
+    try {
+      const parsedData = parseCsv(csvInput);
+      if (parsedData.length === 0) {
+        setUploadMessage("No valid data found in CSV to upload.");
+        setUploading(false);
+        return;
+      }
+
+      const salesCollectionRef = collection(db, `artifacts/${appId}/public/data/salesReports`);
+      
+      // Clear existing data before adding new (for full dump behavior)
+      const existingDocs = await getDocs(query(salesCollectionRef));
+      const deletePromises = existingDocs.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log("Cleared existing sales data.");
+
+
+      // Add new data
+      for (const item of parsedData) {
+        await addDoc(salesCollectionRef, {
+          ...item,
+          uploadedBy: auth.currentUser.uid, // Store who uploaded it
+          uploadedAt: serverTimestamp(), // Store when it was uploaded
+        });
+      }
+      setUploadMessage(`Successfully uploaded ${parsedData.length} sales records.`);
+      setCsvInput(''); // Clear input after successful upload
+    } catch (error) {
+      console.error("Error uploading sales data:", error);
+      setUploadMessage(`Error uploading data: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+
   // Filter accessible entities based on the current admin user's entities
   const accessibleEntities = Object.entries(currentUser.entities || {})
     .filter(([, value]) => value === "Yes")
     .map(([key]) => key);
 
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Standardized height/width */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h2>
 
       {accessibleEntities.length > 0 ? (
@@ -724,7 +949,7 @@ const AdminPage = () => {
             value={selectedEntity}
             onChange={(e) => {
               setSelectedEntity(e.target.value);
-              setAdminSubPage(''); // Reset sub-page when entity changes
+              setAdminSubPage('');
             }}
           >
             <option value="">-- Please select an entity --</option>
@@ -761,10 +986,47 @@ const AdminPage = () => {
             >
               Monthly Bonus
             </button>
+            {canPerformDataDump && ( // Only show this button for allowed users
+              <button
+                onClick={() => setAdminSubPage('sales-data-management')}
+                className={`px-6 py-3 rounded-md text-lg font-semibold transition-all duration-200 ease-in-out transform hover:scale-105 ${
+                  adminSubPage === 'sales-data-management' ? 'bg-purple-600 text-white shadow-lg' : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                }`}
+              >
+                Sales Data Management
+              </button>
+            )}
           </div>
 
           {adminSubPage === 'financials' && <FinancialsReport entity={selectedEntity} />}
           {adminSubPage === 'monthly-bonus' && <MonthlyBonusReport entity={selectedEntity} />}
+          {adminSubPage === 'sales-data-management' && canPerformDataDump && ( // Only render section for allowed users
+            <div className="mt-6 p-4 border border-gray-200 rounded-md bg-gray-50">
+              <h3 className="text-xl font-semibold text-gray-700 mb-4">Upload Sales Data (CSV)</h3>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-md mb-4 font-mono text-sm"
+                rows="10"
+                placeholder="Paste CSV data here, including headers (e.g., Date,Location,Reimbursement,...)"
+                value={csvInput}
+                onChange={(e) => setCsvInput(e.target.value)}
+              ></textarea>
+              <button
+                onClick={handleUploadSalesData}
+                disabled={uploading || !db || !auth || !auth.currentUser || !isAuthReady || !canPerformDataDump} // Disable if not allowed
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? 'Uploading...' : 'Upload Data'}
+              </button>
+              {uploadMessage && (
+                <p className={`mt-4 text-sm ${uploadMessage.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                  {uploadMessage}
+                </p>
+              )}
+              <p className="text-sm text-gray-600 mt-2">
+                Note: Uploading new data will **replace** all existing sales data in the database for this application.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -774,8 +1036,7 @@ const AdminPage = () => {
 // --- Dashboard ---
 const Dashboard = () => {
   const { currentUser, logout } = useAuth();
-  // Initialize currentPage based on currentUser role for correct default navigation
-  const [currentPage, setCurrentPage] = useState('patient-portal'); // Initial placeholder, will be set by useEffect
+  const [currentPage, setCurrentPage] = useState('patient-portal');
 
   // Define admin users with full access to patient and physician portals
   const fullAccessAdminsUsernames = ["SatishD", "AshlieT", "Minak", "JayM", "AghaA"];
@@ -820,7 +1081,7 @@ const Dashboard = () => {
       default:
         // This default should ideally be caught by useEffect, but as a safeguard
         return (
-          <div className="p-8 bg-white rounded-lg shadow-md text-center">
+          <div className="p-8 bg-white rounded-lg shadow-md text-center w-full min-h-[500px]"> {/* Standardized height/width */}
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome!</h2>
             <p className="text-lg text-gray-700">Please select an option from the navigation.</p>
           </div>
