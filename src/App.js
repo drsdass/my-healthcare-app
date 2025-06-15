@@ -370,26 +370,26 @@ const LoginPage = () => {
           {(loginType === 'admin' || loginType === 'sales') && (
             <>
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-300"> {/* Text color changed */}
+                <label htmlFor="username" className="block text-sm font-medium text-gray-300">
                   Username
                 </label>
                 <input
                   type="text"
                   id="username"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm" /* Styles adjusted */
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300"> {/* Text color changed */}
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                   Password
                 </label>
                 <input
                   type="password"
                   id="password"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm" /* Styles adjusted */
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -505,7 +505,7 @@ const LoginPage = () => {
 // --- PatientPortal ---
 const PatientPortal = () => {
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md">
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Patient Portal</h2>
       <p className="text-gray-700 text-lg">
         Welcome to the Patient Portal. Here you can view your appointments, test results, and communicate with your healthcare providers.
@@ -531,7 +531,7 @@ const PatientPortal = () => {
 // --- PhysicianProvider ---
 const PhysicianProvider = () => {
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md">
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Physician/Provider Dashboard</h2>
       <p className="text-gray-700 text-lg">
         This portal provides tools and resources for physicians and healthcare providers.
@@ -564,7 +564,7 @@ const PhysicianProvider = () => {
 // --- SalesMarketing ---
 const SalesMarketing = () => {
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md">
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Sales & Marketing Dashboard</h2>
       <p className="text-gray-700 text-lg">
         Access tools and insights for sales and marketing initiatives.
@@ -710,7 +710,7 @@ const AdminPage = () => {
     .map(([key]) => key);
 
   return (
-    <div className="p-8 bg-white rounded-lg shadow-md">
+    <div className="p-8 bg-white rounded-lg shadow-md w-full min-h-[500px]"> {/* Added min-height */}
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h2>
 
       {accessibleEntities.length > 0 ? (
@@ -791,10 +791,12 @@ const Dashboard = () => {
       } else if (currentUser.role === 'physician') {
         setCurrentPage('physician-provider');
       } else if (currentUser.role === 'admin') {
+        // Admins with full access go to Patient Portal by default
         if (isFullAccessAdmin) {
-          setCurrentPage('patient-portal'); // Full access admins can view patient/physician
+          setCurrentPage('patient-portal');
         } else {
-          setCurrentPage('sales-marketing'); // Other admins (incl. DarangT, ACG, BenM, SonnyA)
+          // Other admins (e.g., BobS, Omar, MelindaC, Wenjun, AndreaM, DarangT, ACG, BenM, SonnyA) go to Admin page
+          setCurrentPage('admin');
         }
       } else if (currentUser.role === 'sales') {
         setCurrentPage('sales-marketing'); // Dedicated sales user like KeenanW
