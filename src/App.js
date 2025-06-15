@@ -322,18 +322,20 @@ const LoginPage = () => {
   };
 
   return (
-    // Removed `justify-start pt-20` to allow for vertical centering with the new background
-    <div className="flex flex-col items-center justify-center w-full min-h-screen z-10 p-4"> {/* Added p-4 for some padding on small screens */}
-      {/* Increased max-width significantly and added responsive width classes */}
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Login to One Health Holdings Portal</h2> {/* Updated title */}
+    // The main container for the login form, adjusted for the new split layout
+    // Removed full-screen centering as parent AuthContent now handles it.
+    // Adjusted width to fit the right panel's design.
+    <div className="flex flex-col items-center justify-center h-full w-full p-8">
+      {/* Increased max-width and adjusted background/text colors for the dark theme */}
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-lg md:max-w-xl lg:max-w-md"> {/* Adjusted max-w for responsiveness */}
+        <h2 className="text-3xl font-bold text-center text-white mb-8">Login to One Health Holdings Portal</h2> {/* Text color changed to white */}
 
         {/* Login Type Selection */}
         <div className="mb-6 flex justify-center space-x-4 flex-wrap gap-2">
           <button
             onClick={() => handleLoginTypeChange('admin')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              loginType === 'admin' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              loginType === 'admin' ? 'bg-cyan-600 text-white shadow' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
             Admin Login
@@ -341,7 +343,7 @@ const LoginPage = () => {
           <button
             onClick={() => handleLoginTypeChange('sales')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              loginType === 'sales' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              loginType === 'sales' ? 'bg-cyan-600 text-white shadow' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
             Sales Login
@@ -349,7 +351,7 @@ const LoginPage = () => {
           <button
             onClick={() => handleLoginTypeChange('patient')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              loginType === 'patient' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              loginType === 'patient' ? 'bg-cyan-600 text-white shadow' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
             Patient Login
@@ -357,7 +359,7 @@ const LoginPage = () => {
           <button
             onClick={() => handleLoginTypeChange('physician')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              loginType === 'physician' ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              loginType === 'physician' ? 'bg-cyan-600 text-white shadow' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
             Physician Login
@@ -368,26 +370,26 @@ const LoginPage = () => {
           {(loginType === 'admin' || loginType === 'sales') && (
             <>
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="username" className="block text-sm font-medium text-gray-300"> {/* Text color changed */}
                   Username
                 </label>
                 <input
                   type="text"
                   id="username"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm" /* Styles adjusted */
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300"> {/* Text color changed */}
                   Password
                 </label>
                 <input
                   type="password"
                   id="password"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm" /* Styles adjusted */
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -399,26 +401,26 @@ const LoginPage = () => {
           {loginType === 'patient' && (
             <>
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-300">
                   Last Name
                 </label>
                 <input
                   type="text"
                   id="lastName"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label htmlFor="ssnLast4" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="ssnLast4" className="block text-sm font-medium text-gray-300">
                   Last 4 of SSN
                 </label>
                 <input
                   type="text"
                   id="ssnLast4"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={ssnLast4}
                   onChange={(e) => setSsnLast4(e.target.value)}
                   maxLength="4"
@@ -426,13 +428,13 @@ const LoginPage = () => {
                 />
               </div>
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-300">
                   Phone Number
                 </label>
                 <input
                   type="tel"
                   id="phoneNumber"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   required
@@ -444,26 +446,26 @@ const LoginPage = () => {
           {loginType === 'physician' && (
             <>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300">
                   Email Address
                 </label>
                 <input
                   type="email"
                   id="email"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                   Password
                 </label>
                 <input
                   type="password"
                   id="password"
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500 bg-gray-700 text-white sm:text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -474,7 +476,7 @@ const LoginPage = () => {
 
           <button
             type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform transition-transform hover:scale-105"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transform transition-transform hover:scale-105"
           >
             Login
           </button>
@@ -918,22 +920,35 @@ function AuthContent() {
   const { currentUser } = useAuth();
 
   return (
-    // Outer container now handles full screen background and centers content
-    <div className="min-h-screen flex items-center justify-center relative">
-      {/* Full screen background image */}
-      {!currentUser && (
+    // The main container for the entire login page. If user is not logged in,
+    // it creates a split layout with the image on the left and form on the right.
+    // If logged in, it just renders the Dashboard.
+    <div className="min-h-screen flex">
+      {!currentUser ? (
         <>
-          <img
-            src="/DNA-helix-concept.jpg"
-            alt="DNA helix background for One Health Holdings"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          {/* Overlay for better contrast on the login form */}
-          <div className="absolute inset-0 bg-gray-900 opacity-60"></div>
+          {/* Left section: Image background */}
+          <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden bg-gray-900">
+            <img
+              src="/DNA-helix-concept.jpg"
+              alt="DNA helix background for One Health Holdings"
+              className="absolute inset-0 w-full h-full object-cover opacity-70"
+            />
+            {/* You can add content over the image if needed, like a logo or text */}
+            <div className="relative z-10 p-8 text-white text-center">
+              {/* Optional: Add text or logo over the image if it fits the design */}
+              {/* <h2 className="text-5xl font-bold">One Health Holdings</h2>
+              <p className="mt-4 text-xl">Connecting Healthcare, Empowering Lives.</p> */}
+            </div>
+          </div>
+
+          {/* Right section: Login Form */}
+          <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 sm:p-6 md:p-8">
+            <LoginPage />
+          </div>
         </>
+      ) : (
+        <Dashboard />
       )}
-      {/* Login or Dashboard content is now correctly layered above the background */}
-      {currentUser ? <Dashboard /> : <LoginPage />}
     </div>
   );
 }
