@@ -1,3 +1,7 @@
+// =======================================================
+// src/App.js Content
+// =======================================================
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
@@ -233,6 +237,7 @@ let auth;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
+
 // --- AuthContext ---
 const AuthContext = createContext(null);
 
@@ -244,11 +249,26 @@ const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Initialize Firebase only once
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-      auth = getAuth(app);
+    if (!app && firebaseConfig && Object.keys(firebaseConfig).length > 0) { // Check if firebaseConfig is not empty
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        console.log("Firebase initialized successfully.");
+      } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        setErrorMessage(`Firebase initialization failed: ${error.message}. Check your Firebase configuration.`);
+        setShowModal(true);
+        return; // Prevent further execution if init fails
+      }
+    } else if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+      console.error("Firebase config is missing or empty.");
+      setErrorMessage("Firebase configuration is incomplete. Please ensure Firebase config is provided.");
+      setShowModal(true);
+      setIsAuthReady(true); // Mark auth as ready to allow error display
+      return;
     }
+
 
     // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -276,7 +296,7 @@ const AuthProvider = ({ children }) => {
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // Run only once on component mount
+  }, [firebaseConfig]); // Depend on firebaseConfig to re-run if it changes
 
   const login = (credentials, loginType) => {
     let userFound = null;
@@ -1174,8 +1194,7 @@ const Dashboard = () => {
   );
 };
 
-// Main App component (This is effectively src/index.js rendering App.js now)
-// We are structuring it this way to keep everything in one React immersive block.
+// Main App component
 export default function App() {
   return (
     <AuthProvider>
@@ -1189,8 +1208,32 @@ function AuthContent() {
   const { currentUser } = useAuth();
 
   return (
-    <div className="App">
-      {currentUser ? <Dashboard /> : <LoginPage />}
+    <div className="min-h-screen flex">
+      {!currentUser ? (
+        <>
+          {/* Left section: Image background */}
+          <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden bg-gray-900">
+            <img
+              src="/DNA-helix-concept.jpg"
+              alt="DNA helix background for One Health Holdings"
+              className="absolute inset-0 w-full h-full object-cover opacity-70"
+            />
+            {/* You can add content over the image if needed, like a logo or text */}
+            <div className="relative z-10 p-8 text-white text-center">
+              {/* Optional: Add text or logo over the image if it fits the design */}
+              {/* <h2 className="text-5xl font-bold">One Health Holdings</h2>
+              <p className="mt-4 text-xl">Connecting Healthcare, Empowering Lives.</p> */}
+            </div>
+          </div>
+
+          {/* Right section: Login Form */}
+          <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 sm:p-6 md:p-8">
+            <LoginPage />
+          </div>
+        </>
+      ) : (
+        <Dashboard />
+      )}
     </div>
   );
 }
