@@ -1,11 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, query, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
+import { getFirestore, collection, query, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 
 // --- Hardcoded User Data ---
-// Updated user data structure to include roles and specific login fields
 const users = [
   // Full Access Admins (can see Patient, Physician, Sales, Admin)
   {
@@ -227,6 +226,7 @@ const users = [
 ];
 
 // --- Firebase Initialization (Global Access for AuthProvider) ---
+// These variables are provided by the Canvas environment at runtime
 let app;
 let db;
 let auth;
@@ -604,7 +604,7 @@ const PhysicianProvider = () => {
       </div>
       <div className="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-xl font-semibold text-gray-700 mb-2">Prescription Management:</h3>
-        <p className="text-gray-600">Digitally prescribe and track medications.</p>
+        <p className="text-600">Digitally prescribe and track medications.</p>
         <button className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">
           E-Prescribe
         </button>
@@ -830,12 +830,12 @@ const MonthlyBonusReport = ({ entity }) => {
 
 // --- AdminPage ---
 const AdminPage = () => {
-  const { currentUser, db, auth, isAuthReady } = useAuth();
+  const { currentUser, db, auth, isAuthReady } = useAuth(); // Added db, auth, isAuthReady
   const [selectedEntity, setSelectedEntity] = useState('');
   const [adminSubPage, setAdminSubPage] = useState('');
-  const [csvInput, setCsvInput] = useState('');
-  const [uploadMessage, setUploadMessage] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [csvInput, setCsvInput] = useState(''); // State for CSV input
+  const [uploadMessage, setUploadMessage] = useState(''); // State for upload message
+  const [uploading, setUploading] = useState(false); // State for upload loading
 
   // Define users who are allowed to perform the data dump
   const allowedDataDumpUsers = ["SatishD", "AshlieT"];
@@ -850,6 +850,7 @@ const AdminPage = () => {
     );
   }
 
+  // Function to parse CSV data
   const parseCsv = (csvString) => {
     const lines = csvString.trim().split('\n');
     if (lines.length < 2) throw new Error("CSV must contain headers and at least one row of data.");
@@ -874,6 +875,7 @@ const AdminPage = () => {
     return data;
   };
 
+  // Function to handle CSV data upload to Firestore
   const handleUploadSalesData = async () => {
     if (!db || !auth || !auth.currentUser || !isAuthReady) {
       setUploadMessage("Error: Database or authentication not ready.");
@@ -1092,10 +1094,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg p-6 flex flex-col md:flex-row justify-between items-center rounded-b-xl">
-        {/* Logo and Title */}
+        {/* Updated logo src to new file name */}
         <div className="flex items-center mb-4 md:mb-0">
-          {/* Updated logo src to new file name */}
           <img src="/Logo.png" alt="One Health Holdings Logo" className="h-16 md:h-20 w-auto object-contain mr-4" />
+          <h1 className="text-4xl font-extrabold text-white">
+            Healthcare Portal
+          </h1>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -1170,7 +1174,8 @@ const Dashboard = () => {
   );
 };
 
-// Main App component
+// Main App component (This is effectively src/index.js rendering App.js now)
+// We are structuring it this way to keep everything in one React immersive block.
 export default function App() {
   return (
     <AuthProvider>
@@ -1179,39 +1184,13 @@ export default function App() {
   );
 }
 
+// AuthContent component will consume the context and conditionally render LoginPage or Dashboard
 function AuthContent() {
   const { currentUser } = useAuth();
 
   return (
-    // The main container for the entire login page. If user is not logged in,
-    // it creates a split layout with the image on the left and form on the right.
-    // If logged in, it just renders the Dashboard.
-    <div className="min-h-screen flex">
-      {!currentUser ? (
-        <>
-          {/* Left section: Image background */}
-          <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden bg-gray-900">
-            <img
-              src="/DNA-helix-concept.jpg"
-              alt="DNA helix background for One Health Holdings"
-              className="absolute inset-0 w-full h-full object-cover opacity-70"
-            />
-            {/* You can add content over the image if needed, like a logo or text */}
-            <div className="relative z-10 p-8 text-white text-center">
-              {/* Optional: Add text or logo over the image if it fits the design */}
-              {/* <h2 className="text-5xl font-bold">One Health Holdings</h2>
-              <p className="mt-4 text-xl">Connecting Healthcare, Empowering Lives.</p> */}
-            </div>
-          </div>
-
-          {/* Right section: Login Form */}
-          <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 sm:p-6 md:p-8">
-            <LoginPage />
-          </div>
-        </>
-      ) : (
-        <Dashboard />
-      )}
+    <div className="App">
+      {currentUser ? <Dashboard /> : <LoginPage />}
     </div>
   );
 }
