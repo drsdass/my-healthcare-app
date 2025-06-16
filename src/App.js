@@ -229,15 +229,6 @@ const users = [
   },
 ];
 
-// --- Firebase Initialization (Global Access for AuthProvider) ---
-// These variables are provided by the Canvas environment at runtime
-let app;
-let db;
-let auth;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-
-
 // --- AuthContext ---
 const AuthContext = createContext(null);
 
@@ -245,58 +236,73 @@ const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [isAuthReady, setIsAuthReady] = useState(false); // New state for auth readiness
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [firebaseApp, setFirebaseApp] = useState(null);
+  const [firestoreDb, setFirestoreDb] = useState(null);
+  const [firebaseAuth, setFirebaseAuth] = useState(null);
+  
+  // App ID from Canvas global variable
+  const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   useEffect(() => {
-    // Initialize Firebase only once
-    if (!app && firebaseConfig && Object.keys(firebaseConfig).length > 0) { // Check if firebaseConfig is not empty
-      try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        console.log("Firebase initialized successfully.");
-      } catch (error) {
-        console.error("Firebase initialization failed:", error);
-        setErrorMessage(`Firebase initialization failed: ${error.message}. Check your Firebase configuration.`);
+    // Firebase initialization
+    if (!firebaseApp) {
+      const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+      
+      if (config && Object.keys(config).length > 0) {
+        try {
+          const appInstance = initializeApp(config);
+          const dbInstance = getFirestore(appInstance);
+          const authInstance = getAuth(appInstance);
+          setFirebaseApp(appInstance);
+          setFirestoreDb(dbInstance);
+          setFirebaseAuth(authInstance);
+          console.log("Firebase initialized successfully in Canvas environment.");
+        } catch (error) {
+          console.error("Firebase initialization failed in Canvas:", error);
+          setErrorMessage(`Firebase initialization failed: ${error.message}. Please ensure Firebase is correctly configured for the Canvas environment.`);
+          setShowModal(true);
+          setIsAuthReady(true);
+          return;
+        }
+      } else {
+        console.error("Firebase config is missing or empty in Canvas.");
+        setErrorMessage("Firebase configuration is incomplete for Canvas. Please ensure it's provided.");
         setShowModal(true);
-        return; // Prevent further execution if init fails
+        setIsAuthReady(true);
+        return;
       }
-    } else if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-      console.error("Firebase config is missing or empty.");
-      setErrorMessage("Firebase configuration is incomplete. Please ensure Firebase config is provided.");
-      setShowModal(true);
-      setIsAuthReady(true); // Mark auth as ready to allow error display
-      return;
     }
 
-
-    // Set up auth state listener
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // User is signed in, if it's an anonymous sign-in, just set it
-        // Otherwise, if custom token was used, the user object will be full
-        console.log("Firebase user signed in:", user.uid);
-      } else {
-        // User is signed out, or not yet signed in.
-        // For Canvas environment, try to sign in with custom token or anonymously.
-        try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-            console.log("Signed in with custom token.");
-          } else {
-            await signInAnonymously(auth);
-            console.log("Signed in anonymously.");
+    // Authentication state listener setup
+    let unsubscribe;
+    if (firebaseAuth) {
+      unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+        if (user) {
+          console.log("Firebase user signed in:", user.uid);
+        } else {
+          try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await signInWithCustomToken(firebaseAuth, __initial_auth_token);
+              console.log("Signed in with custom token for Canvas.");
+            } else {
+              await signInAnonymously(firebaseAuth);
+              console.log("Signed in anonymously for Canvas.");
+            }
+          } catch (error) {
+            console.error("Firebase authentication error in Canvas:", error);
+            // If anonymous sign-in fails, it might be a rule issue, but for Canvas, we just log.
           }
-        } catch (error) {
-          console.error("Firebase authentication error:", error);
         }
-      }
-      setIsAuthReady(true); // Firebase auth state is ready
-    });
+        setIsAuthReady(true);
+      });
+    }
 
     // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, [firebaseConfig]); // Depend on firebaseConfig to re-run if it changes
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseApp, firestoreDb, firebaseAuth]); // Dependencies: ensure effect runs when Firebase instances are set
 
   const login = (credentials, loginType) => {
     let userFound = null;
@@ -335,9 +341,9 @@ const AuthProvider = ({ children }) => {
   const logout = () => {
     setCurrentUser(null);
     setErrorMessage("");
-    if (auth) {
+    if (firebaseAuth) {
       // Re-authenticate anonymously after logout to maintain Firestore access
-      signInAnonymously(auth).catch(error => console.error("Error signing in anonymously after logout:", error));
+      signInAnonymously(firebaseAuth).catch(error => console.error("Error signing in anonymously after logout:", error));
     }
   };
 
@@ -347,7 +353,7 @@ const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, errorMessage, showModal, closeModal, db, auth, isAuthReady }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, errorMessage, showModal, closeModal, db: firestoreDb, auth: firebaseAuth, isAuthReady, appId: currentAppId }}>
       {children}
     </AuthContext.Provider>
   );
@@ -635,7 +641,7 @@ const PhysicianProvider = () => {
 
 // --- SalesMarketing ---
 const SalesMarketing = () => {
-  const { currentUser, db, isAuthReady } = useAuth();
+  const { currentUser, db, isAuthReady, appId } = useAuth(); // Destructure appId from useAuth
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -644,12 +650,20 @@ const SalesMarketing = () => {
   const fullAccessSalesAdmins = ["SatishD", "AshlieT", "Minak"];
 
   useEffect(() => {
-    if (!db || !isAuthReady) return; // Ensure Firestore and auth are ready
+    // Ensure Firestore and auth are ready AND db is not null/undefined
+    if (!db || !isAuthReady) {
+      console.log("SalesMarketing: DB or Auth not ready, or DB is null.");
+      return;
+    }
 
     const fetchSalesData = async () => {
       setLoading(true);
       setError(null);
       try {
+        // Ensure appId is available before creating the collection reference
+        if (!appId) {
+          throw new Error("Application ID (appId) is not available for Firestore path.");
+        }
         const salesColRef = collection(db, `artifacts/${appId}/public/data/salesReports`);
         const q = query(salesColRef);
         const querySnapshot = await getDocs(q);
@@ -670,14 +684,14 @@ const SalesMarketing = () => {
         setSalesData(fetchedData);
       } catch (err) {
         console.error("Error fetching sales data:", err);
-        setError("Failed to load sales data.");
+        setError("Failed to load sales data: " + err.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchSalesData();
-  }, [db, isAuthReady]); // Re-fetch when db or auth status changes
+  }, [db, isAuthReady, appId]); // Re-fetch when db, auth status, or appId changes
 
   // Filter sales data based on user role and permissions
   const filteredSalesData = currentUser && fullAccessSalesAdmins.includes(currentUser.username)
@@ -850,7 +864,7 @@ const MonthlyBonusReport = ({ entity }) => {
 
 // --- AdminPage ---
 const AdminPage = () => {
-  const { currentUser, db, auth, isAuthReady } = useAuth(); // Added db, auth, isAuthReady
+  const { currentUser, db, auth, isAuthReady, appId } = useAuth(); // Added appId
   const [selectedEntity, setSelectedEntity] = useState('');
   const [adminSubPage, setAdminSubPage] = useState('');
   const [csvInput, setCsvInput] = useState(''); // State for CSV input
@@ -897,8 +911,9 @@ const AdminPage = () => {
 
   // Function to handle CSV data upload to Firestore
   const handleUploadSalesData = async () => {
-    if (!db || !auth || !auth.currentUser || !isAuthReady) {
-      setUploadMessage("Error: Database or authentication not ready.");
+    // Ensure db, auth, isAuthReady, and appId are available
+    if (!db || !auth || !auth.currentUser || !isAuthReady || !appId) {
+      setUploadMessage("Error: Database, authentication, or application ID not ready/available.");
       return;
     }
 
